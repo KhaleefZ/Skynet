@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Dashboard } from '@/components/Dashboard';
 import { AdminPanel } from '@/components/AdminPanel';
 import { EPRReviewPanel } from '@/components/EPRReviewPanel';
+import { getPeople } from '@/lib/api';
 
 type ViewType = 'dashboard' | 'person' | 'admin' | 'reviews';
 
@@ -19,6 +20,9 @@ function MainApp() {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [students, setStudents] = useState<Person[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const { showToast } = useToast();
 
   // Check backend connection
@@ -48,6 +52,25 @@ function MainApp() {
 
   const handleSelectPerson = (person: Person) => {
     setSelectedPerson(person);
+    setCurrentView('person');
+  };
+
+  const handleOpenStudentModal = async () => {
+    setShowStudentModal(true);
+    setLoadingStudents(true);
+    try {
+      const data = await getPeople({ role: 'student' });
+      setStudents(data);
+    } catch (error) {
+      showToast('Failed to load students', 'error');
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleSelectStudentForEPR = (student: Person) => {
+    setShowStudentModal(false);
+    setSelectedPerson(student);
     setCurrentView('person');
   };
 
@@ -196,7 +219,12 @@ function MainApp() {
         {/* Right panel - Dashboard or Person detail */}
         <div className="flex-1 overflow-hidden">
           {currentView === 'dashboard' && (
-            <Dashboard user={user} onSelectPerson={handleSelectPerson} />
+            <Dashboard 
+              user={user} 
+              onSelectPerson={handleSelectPerson}
+              onCreateEPR={handleOpenStudentModal}
+              onNavigateToAdmin={() => setCurrentView('admin')}
+            />
           )}
           {currentView === 'admin' && user.role === 'admin' && (
             <AdminPanel />
@@ -236,6 +264,58 @@ function MainApp() {
           )}
         </div>
       </div>
+
+      {/* Student Selection Modal for New EPR */}
+      {showStudentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowStudentModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Select Student</h2>
+                <button onClick={() => setShowStudentModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">Choose a student to create a new EPR for</p>
+            </div>
+            <div className="overflow-y-auto max-h-96">
+              {loadingStudents ? (
+                <div className="p-8 text-center">
+                  <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="text-gray-500 mt-3">Loading students...</p>
+                </div>
+              ) : students.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No students found
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {students.map(student => (
+                    <button
+                      key={student.id}
+                      onClick={() => handleSelectStudentForEPR(student)}
+                      className="w-full p-4 flex items-center gap-4 hover:bg-blue-50 transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        {student.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{student.name}</div>
+                        <div className="text-sm text-gray-500">{student.email}</div>
+                      </div>
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

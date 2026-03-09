@@ -7,6 +7,8 @@ import { getPeople, getEPRs, getEPRSummary } from '@/lib/api';
 interface DashboardProps {
   user: User;
   onSelectPerson: (person: Person) => void;
+  onCreateEPR?: () => void;
+  onNavigateToAdmin?: () => void;
 }
 
 interface DashboardStats {
@@ -18,7 +20,7 @@ interface DashboardStats {
   recentEPRs: EPRRecord[];
 }
 
-export function Dashboard({ user, onSelectPerson }: DashboardProps) {
+export function Dashboard({ user, onSelectPerson, onCreateEPR, onNavigateToAdmin }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [myPerson, setMyPerson] = useState<Person | null>(null);
@@ -237,11 +239,17 @@ export function Dashboard({ user, onSelectPerson }: DashboardProps) {
             <h3 className="text-lg font-semibold mb-2">Quick Actions</h3>
             <p className="text-blue-100 text-sm mb-4">Common tasks at your fingertips</p>
             <div className="flex gap-3">
-              <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+              <button 
+                onClick={onCreateEPR}
+                className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+              >
                 + New EPR
               </button>
               {user.role === 'admin' && (
-                <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors">
+                <button 
+                  onClick={onNavigateToAdmin}
+                  className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+                >
                   + Add User
                 </button>
               )}
